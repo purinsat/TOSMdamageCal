@@ -3,6 +3,7 @@ import { DamageBreakdown } from "@/lib/damage/types";
 type CalculationBreakdownProps = {
   breakdown: DamageBreakdown;
   showDetails: boolean;
+  savedDamages: Array<{ id: number; label: string; totalDamage: number }>;
 };
 
 const formatFull = (value: number) =>
@@ -17,6 +18,7 @@ const formatCompact = (value: number) =>
 export const CalculationBreakdown = ({
   breakdown,
   showDetails,
+  savedDamages,
 }: CalculationBreakdownProps) => {
   return (
     <section className="rounded-2xl border border-purple-500/30 bg-slate-900/80 p-5">
@@ -25,6 +27,37 @@ export const CalculationBreakdown = ({
         <StatCard label="Damage from Attack" value={breakdown.attackPart} />
         <StatCard label="Damage from Critical" value={breakdown.criticalPart} />
         <StatCard label="Total Damage" value={breakdown.totalDamage} highlight />
+      </div>
+
+      <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+        <p className="text-xs uppercase tracking-wide text-slate-300">Saved Damage</p>
+        {savedDamages.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-400">
+            No saved values yet. Click Save Damage to compare versions.
+          </p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {savedDamages.map((item) => {
+              const delta = breakdown.totalDamage - item.totalDamage;
+              const deltaPrefix = delta >= 0 ? "+" : "";
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">{item.label}</p>
+                    <p className="text-xs text-slate-400">{formatFull(item.totalDamage)}</p>
+                  </div>
+                  <p className="text-right text-xs text-slate-300">
+                    Delta: {deltaPrefix}
+                    {formatFull(delta)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {showDetails ? (

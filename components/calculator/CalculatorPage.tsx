@@ -33,6 +33,9 @@ const NumberInput = ({
 
 export const CalculatorPage = () => {
   const [showDetails, setShowDetails] = useState(false);
+  const [savedDamages, setSavedDamages] = useState<
+    Array<{ id: number; label: string; totalDamage: number }>
+  >([]);
   const form = useForm<DamageInputForm>({
     resolver: zodResolver(damageInputSchema),
     defaultValues: defaultDamageInput,
@@ -63,6 +66,57 @@ export const CalculatorPage = () => {
   const formValues = useWatch({ control: form.control });
   const parsed = damageInputSchema.safeParse(formValues);
   const breakdown = calculateDamage(parsed.success ? parsed.data : defaultDamageInput);
+
+  const handleResetToZero = () => {
+    const current = form.getValues();
+    form.reset({
+      ...current,
+      attack: 0,
+      criticalDamage: 0,
+      skillDamagePercent: 0,
+      bonusPchPercent: 0,
+      criticalHit: false,
+      pierce: false,
+      weakness: false,
+      elementalWeaknessPercent: 0,
+      highDefMon: false,
+      defense: 0,
+      finalReductPercent: 0,
+      generalMultiplier: current.generalMultiplier.map((entry) => ({
+        ...entry,
+        value: 0,
+      })),
+      skillMultiplier: current.skillMultiplier.map((entry) => ({
+        ...entry,
+        value: 0,
+      })),
+      buffDebuffMultiplier: current.buffDebuffMultiplier.map((entry) => ({
+        ...entry,
+        value: 0,
+      })),
+      conditionDamageMultiplier: current.conditionDamageMultiplier.map((entry) => ({
+        ...entry,
+        value: 0,
+      })),
+      ignoreDefenseCustomizations: current.ignoreDefenseCustomizations.map((entry) => ({
+        ...entry,
+        value: 0,
+      })),
+    });
+    setShowDetails(false);
+    setSavedDamages([]);
+  };
+
+  const handleSaveDamage = () => {
+    setSavedDamages((previous) => {
+      const nextVersion = previous.length + 1;
+      const next = [
+        ...previous,
+        { id: Date.now(), label: `V${nextVersion}`, totalDamage: breakdown.totalDamage },
+      ];
+      return next.slice(-6);
+    });
+  };
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl p-4 md:p-8">
@@ -205,7 +259,11 @@ export const CalculatorPage = () => {
         </form>
 
         <div className="space-y-4 lg:sticky lg:top-4 lg:col-span-2 lg:h-fit">
-          <CalculationBreakdown breakdown={breakdown} showDetails={showDetails} />
+          <CalculationBreakdown
+            breakdown={breakdown}
+            showDetails={showDetails}
+            savedDamages={savedDamages}
+          />
           <button
             type="button"
             onClick={() => setShowDetails((value) => !value)}
@@ -215,14 +273,17 @@ export const CalculatorPage = () => {
           </button>
           <button
             type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `Attack: ${breakdown.attackPart}\nCritical: ${breakdown.criticalPart}\nTotal: ${breakdown.totalDamage}`,
-              );
-            }}
+            onClick={handleSaveDamage}
             className="w-full rounded-xl border border-purple-500/70 bg-purple-900/30 px-4 py-2 font-medium hover:bg-purple-800/40"
           >
-            Copy Result
+            Save Damage
+          </button>
+          <button
+            type="button"
+            onClick={handleResetToZero}
+            className="w-full rounded-xl border border-slate-500 bg-slate-900 px-4 py-2 font-medium hover:bg-slate-800"
+          >
+            Reset All To Zero
           </button>
         </div>
       </div>
