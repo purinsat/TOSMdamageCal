@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { defaultDamageInput } from "@/lib/damage/defaults";
@@ -137,6 +138,12 @@ export const CalculatorPage = () => {
         <p className="mt-2 text-slate-300">
           Public calculator with full formula transparency and custom multipliers.
         </p>
+        <Link
+          href="/equipment"
+          className="mt-4 inline-block rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm hover:bg-slate-800"
+        >
+          Open Equipment Option Planner
+        </Link>
         <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-200">
           <p>Please subscribe us at</p>
           <a
