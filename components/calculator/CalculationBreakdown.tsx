@@ -4,6 +4,8 @@ type CalculationBreakdownProps = {
   breakdown: DamageBreakdown;
   showDetails: boolean;
   savedDamages: Array<{ id: number; label: string; totalDamage: number }>;
+  onRenameSavedDamage: (id: number, label: string) => void;
+  onRemoveSavedDamage: (id: number) => void;
 };
 
 const formatFull = (value: number) =>
@@ -19,6 +21,8 @@ export const CalculationBreakdown = ({
   breakdown,
   showDetails,
   savedDamages,
+  onRenameSavedDamage,
+  onRemoveSavedDamage,
 }: CalculationBreakdownProps) => {
   return (
     <section className="rounded-2xl border border-purple-500/30 bg-slate-900/80 p-5">
@@ -43,16 +47,33 @@ export const CalculationBreakdown = ({
               return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2"
+                  className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-slate-200">{item.label}</p>
-                    <p className="text-xs text-slate-400">{formatFull(item.totalDamage)}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="text"
+                        value={item.label}
+                        onChange={(event) => onRenameSavedDamage(item.id, event.target.value)}
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm font-medium text-slate-200"
+                        placeholder="Saved name"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveSavedDamage(item.id)}
+                      className="rounded-md border border-red-500/60 px-2 py-1 text-xs text-red-200 hover:bg-red-900/30"
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <p className="text-right text-xs text-slate-300">
-                    Delta: {deltaPrefix}
-                    {formatFull(delta)}
-                  </p>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-400">{formatFull(item.totalDamage)}</p>
+                    <p className="text-right text-xs text-slate-300">
+                      Delta: {deltaPrefix}
+                      {formatFull(delta)}
+                    </p>
+                  </div>
                 </div>
               );
             })}

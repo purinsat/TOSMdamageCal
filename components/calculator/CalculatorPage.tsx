@@ -118,6 +118,16 @@ export const CalculatorPage = () => {
     });
   };
 
+  const handleRenameSavedDamage = (id: number, label: string) => {
+    setSavedDamages((previous) =>
+      previous.map((item) => (item.id === id ? { ...item, label } : item)),
+    );
+  };
+
+  const handleRemoveSavedDamage = (id: number) => {
+    setSavedDamages((previous) => previous.filter((item) => item.id !== id));
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-7xl p-4 md:p-8">
       <header className="mb-6">
@@ -263,6 +273,8 @@ export const CalculatorPage = () => {
             breakdown={breakdown}
             showDetails={showDetails}
             savedDamages={savedDamages}
+            onRenameSavedDamage={handleRenameSavedDamage}
+            onRemoveSavedDamage={handleRemoveSavedDamage}
           />
           <button
             type="button"
