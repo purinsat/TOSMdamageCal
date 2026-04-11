@@ -27,6 +27,7 @@ const NumberInput = ({
       type="number"
       step={step}
       {...registerProps}
+      onWheel={(event) => event.currentTarget.blur()}
       className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
     />
   </label>

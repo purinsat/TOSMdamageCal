@@ -59,6 +59,7 @@ export const MultiplierSection = ({
               type="number"
               step="any"
               {...register(`${fieldName}.${index}.value`, { valueAsNumber: true })}
+              onWheel={(event) => event.currentTarget.blur()}
               className="col-span-4 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
               placeholder="Value"
             />

@@ -31,6 +31,8 @@ const clampValue = (value: number, min: number, max: number) =>
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm shadow-sm transition-colors focus:border-purple-400 focus:outline-none";
+const ADJUST_BUTTON_CLASS =
+  "rounded-lg border border-slate-600 bg-slate-900 px-2.5 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40";
 
 const SLOT_BADGES: Record<string, { text: string; className: string }> = {
   main_weapon: { text: "MW", className: "border-rose-400/60 bg-rose-500/20 text-rose-200" },
@@ -48,6 +50,9 @@ const formatValue = (stat: AggregatedStat) => {
   const suffix = stat.unit === "percent" ? "%" : "";
   return `${prefix}${stat.totalValue.toLocaleString()}${suffix}`;
 };
+
+const adjustValue = (value: number, delta: number, min: number, max: number) =>
+  clampValue(value + delta, min, max);
 
 const createInitialSelection = (): Record<string, SlotSelection> => {
   return EQUIPMENT_SLOTS.reduce<Record<string, SlotSelection>>((acc, slot) => {
@@ -88,15 +93,6 @@ export const EquipmentOptionsPage = () => {
 
   const updateSlotSelection = (slotId: string, updater: (prev: SlotSelection) => SlotSelection) =>
     setSelections((prev) => ({ ...prev, [slotId]: updater(prev[slotId]) }));
-
-  const getFirstAvailableOptionId = (slotId: string, excludedIds: string[]) => {
-    const slot = EQUIPMENT_SLOTS.find((item) => item.id === slotId);
-    if (!slot) {
-      return "";
-    }
-    const available = slot.subOptions.find((option) => !excludedIds.includes(option.id));
-    return available?.id ?? slot.subOptions[0]?.id ?? "";
-  };
 
   const aggregatedStats = useMemo(() => {
     const aggregateMap = new Map<string, AggregatedStat>();
@@ -251,24 +247,81 @@ export const EquipmentOptionsPage = () => {
  
                     <label className="space-y-1">
                       <span className="text-xs text-slate-300">Value</span>
-                      <input
-                        type="number"
-                        min={selectedMain?.min ?? 0}
-                        max={selectedMain?.max ?? 0}
-                        value={selectedMain ? slotSelection.mainValue : 0}
-                        disabled={!selectedMain}
-                        onChange={(event) => {
-                          if (!selectedMain) {
-                            return;
-                          }
-                          const nextValue = Number(event.target.value);
-                          updateSlotSelection(slot.id, (prev) => ({
-                            ...prev,
-                            mainValue: clampValue(nextValue, selectedMain.min, selectedMain.max),
-                          }));
-                        }}
-                        className={`${INPUT_CLASS} disabled:opacity-40`}
-                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!selectedMain}
+                          onClick={() => {
+                            if (!selectedMain) {
+                              return;
+                            }
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              mainValue: adjustValue(
+                                prev.mainValue,
+                                -1,
+                                selectedMain.min,
+                                selectedMain.max,
+                              ),
+                            }));
+                          }}
+                          className={ADJUST_BUTTON_CLASS}
+                          aria-label={`Decrease ${slot.label} main option value`}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          step="1"
+                          min={selectedMain?.min ?? 0}
+                          max={selectedMain?.max ?? 0}
+                          value={selectedMain ? slotSelection.mainValue : 0}
+                          disabled={!selectedMain}
+                          onChange={(event) => {
+                            if (!selectedMain) {
+                              return;
+                            }
+                            const nextValue = Number(event.target.value);
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              mainValue: nextValue,
+                            }));
+                          }}
+                          onBlur={() => {
+                            if (!selectedMain) {
+                              return;
+                            }
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              mainValue: clampValue(prev.mainValue, selectedMain.min, selectedMain.max),
+                            }));
+                          }}
+                          onWheel={(event) => event.currentTarget.blur()}
+                          className={`${INPUT_CLASS} disabled:opacity-40`}
+                        />
+                        <button
+                          type="button"
+                          disabled={!selectedMain}
+                          onClick={() => {
+                            if (!selectedMain) {
+                              return;
+                            }
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              mainValue: adjustValue(
+                                prev.mainValue,
+                                1,
+                                selectedMain.min,
+                                selectedMain.max,
+                              ),
+                            }));
+                          }}
+                          className={ADJUST_BUTTON_CLASS}
+                          aria-label={`Increase ${slot.label} main option value`}
+                        >
+                          +
+                        </button>
+                      </div>
                     </label>
                     </div>
                   </div>
@@ -322,22 +375,62 @@ export const EquipmentOptionsPage = () => {
                         {selectedExtra?.label ?? "Passive Stat"} Value
                         {selectedExtra?.unit === "percent" ? " (%)" : ""}
                       </span>
-                      <input
-                        type="number"
-                        min={selectedExtra?.min ?? 0}
-                        max={selectedExtra?.max ?? 999999}
-                        value={slotSelection.extraValue}
-                        onChange={(event) => {
-                          const nextValue = Number(event.target.value);
-                          const min = selectedExtra?.min ?? 0;
-                          const max = selectedExtra?.max ?? 999999;
-                          updateSlotSelection(slot.id, (prev) => ({
-                            ...prev,
-                            extraValue: clampValue(nextValue, min, max),
-                          }));
-                        }}
-                        className={INPUT_CLASS}
-                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const min = selectedExtra?.min ?? 0;
+                            const max = selectedExtra?.max ?? 999999;
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              extraValue: adjustValue(prev.extraValue, -1, min, max),
+                            }));
+                          }}
+                          className={ADJUST_BUTTON_CLASS}
+                          aria-label={`Decrease ${slot.label} passive stat value`}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          step="1"
+                          min={selectedExtra?.min ?? 0}
+                          max={selectedExtra?.max ?? 999999}
+                          value={slotSelection.extraValue}
+                          onChange={(event) => {
+                            const nextValue = Number(event.target.value);
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              extraValue: nextValue,
+                            }));
+                          }}
+                          onBlur={() => {
+                            const min = selectedExtra?.min ?? 0;
+                            const max = selectedExtra?.max ?? 999999;
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              extraValue: clampValue(prev.extraValue, min, max),
+                            }));
+                          }}
+                          onWheel={(event) => event.currentTarget.blur()}
+                          className={INPUT_CLASS}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const min = selectedExtra?.min ?? 0;
+                            const max = selectedExtra?.max ?? 999999;
+                            updateSlotSelection(slot.id, (prev) => ({
+                              ...prev,
+                              extraValue: adjustValue(prev.extraValue, 1, min, max),
+                            }));
+                          }}
+                          className={ADJUST_BUTTON_CLASS}
+                          aria-label={`Increase ${slot.label} passive stat value`}
+                        >
+                          +
+                        </button>
+                      </div>
                     </label>
                     </div>
                   </div>
@@ -356,8 +449,7 @@ export const EquipmentOptionsPage = () => {
                           const trimmed = prev.affixes.slice(0, nextCount);
                           const nextAffixes = [...trimmed];
                           while (nextAffixes.length < nextCount) {
-                            const usedIds = nextAffixes.map((affix) => affix.optionId);
-                            const fallbackId = getFirstAvailableOptionId(slot.id, usedIds);
+                            const fallbackId = slot.subOptions[0]?.id ?? "";
                             const fallbackOption = optionsById.get(fallbackId);
                             if (!fallbackOption) {
                               break;
@@ -383,13 +475,7 @@ export const EquipmentOptionsPage = () => {
                 <div className="mt-3 space-y-3">
                   {slotSelection.affixes.map((affix, index) => {
                     const selectedOption = optionsById.get(affix.optionId);
-                    const siblingSelectedIds = slotSelection.affixes
-                      .filter((_, i) => i !== index)
-                      .map((item) => item.optionId);
-                    const optionChoices = slot.subOptions.filter(
-                      (option) =>
-                        !siblingSelectedIds.includes(option.id) || option.id === affix.optionId,
-                    );
+                    const optionChoices = slot.subOptions;
  
                     return (
                       <div
@@ -433,30 +519,112 @@ export const EquipmentOptionsPage = () => {
                           <span className="text-xs text-slate-300">
                             Star #{index + 1} Value {selectedOption?.unit === "percent" ? "(%)" : ""}
                           </span>
-                          <input
-                            type="number"
-                            min={selectedOption?.min ?? 0}
-                            max={selectedOption?.max ?? 0}
-                            value={affix.value}
-                            onChange={(event) => {
-                              if (!selectedOption) {
-                                return;
-                              }
-                              const nextValue = Number(event.target.value);
-                              updateSlotSelection(slot.id, (prev) => ({
-                                ...prev,
-                                affixes: prev.affixes.map((item, affixIndex) =>
-                                  affixIndex === index
-                                    ? {
-                                        ...item,
-                                        value: clampValue(nextValue, selectedOption.min, selectedOption.max),
-                                      }
-                                    : item,
-                                ),
-                              }));
-                            }}
-                            className={INPUT_CLASS}
-                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={!selectedOption}
+                              onClick={() => {
+                                if (!selectedOption) {
+                                  return;
+                                }
+                                updateSlotSelection(slot.id, (prev) => ({
+                                  ...prev,
+                                  affixes: prev.affixes.map((item, affixIndex) =>
+                                    affixIndex === index
+                                      ? {
+                                          ...item,
+                                          value: adjustValue(
+                                            item.value,
+                                            -1,
+                                            selectedOption.min,
+                                            selectedOption.max,
+                                          ),
+                                        }
+                                      : item,
+                                  ),
+                                }));
+                              }}
+                              className={ADJUST_BUTTON_CLASS}
+                              aria-label={`Decrease ${slot.label} star ${index + 1} value`}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              step="1"
+                              min={selectedOption?.min ?? 0}
+                              max={selectedOption?.max ?? 0}
+                              value={affix.value}
+                              onChange={(event) => {
+                                if (!selectedOption) {
+                                  return;
+                                }
+                                const nextValue = Number(event.target.value);
+                                updateSlotSelection(slot.id, (prev) => ({
+                                  ...prev,
+                                  affixes: prev.affixes.map((item, affixIndex) =>
+                                    affixIndex === index
+                                      ? {
+                                          ...item,
+                                          value: nextValue,
+                                        }
+                                      : item,
+                                  ),
+                                }));
+                              }}
+                              onBlur={() => {
+                                if (!selectedOption) {
+                                  return;
+                                }
+                                updateSlotSelection(slot.id, (prev) => ({
+                                  ...prev,
+                                  affixes: prev.affixes.map((item, affixIndex) =>
+                                    affixIndex === index
+                                      ? {
+                                          ...item,
+                                          value: clampValue(
+                                            item.value,
+                                            selectedOption.min,
+                                            selectedOption.max,
+                                          ),
+                                        }
+                                      : item,
+                                  ),
+                                }));
+                              }}
+                              onWheel={(event) => event.currentTarget.blur()}
+                              className={INPUT_CLASS}
+                            />
+                            <button
+                              type="button"
+                              disabled={!selectedOption}
+                              onClick={() => {
+                                if (!selectedOption) {
+                                  return;
+                                }
+                                updateSlotSelection(slot.id, (prev) => ({
+                                  ...prev,
+                                  affixes: prev.affixes.map((item, affixIndex) =>
+                                    affixIndex === index
+                                      ? {
+                                          ...item,
+                                          value: adjustValue(
+                                            item.value,
+                                            1,
+                                            selectedOption.min,
+                                            selectedOption.max,
+                                          ),
+                                        }
+                                      : item,
+                                  ),
+                                }));
+                              }}
+                              className={ADJUST_BUTTON_CLASS}
+                              aria-label={`Increase ${slot.label} star ${index + 1} value`}
+                            >
+                              +
+                            </button>
+                          </div>
                         </label>
                       </div>
                     );
