@@ -7,10 +7,10 @@ const entry = (id: string, name: string, value: number): MultiplierEntry => ({
 });
 
 export const defaultDamageInput: DamageInput = {
-  attack: 74137,
-  criticalDamage: 11981,
-  skillDamagePercent: 20,
-  bonusPchPercent: 9,
+  attack: 120000,
+  criticalDamage: 10000,
+  skillDamagePercent: 50,
+  bonusPchPercent: 20,
   criticalHit: true,
   pierce: true,
   weakness: true,
@@ -20,9 +20,9 @@ export const defaultDamageInput: DamageInput = {
   ignoreDefenseCustomizations: [entry("ignore-def-1", "Ignore DEF 2", 0)],
   finalReductPercent: 0,
   generalMultiplier: [
-    entry("general-1", "Boss Damage Bonus", 24.52),
-    entry("general-2", "Race Damage Bonus", 9.79),
-    entry("general-3", "Target Element Bonus", 3.14),
+    entry("general-1", "Boss Damage Bonus", 40.55),
+    entry("general-2", "Race Damage Bonus", 40),
+    entry("general-3", "Target Element Bonus", 35),
   ],
   skillMultiplier: [
     entry("skill-1", "Skill multiplier", 409),
