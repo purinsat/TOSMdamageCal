@@ -39,8 +39,8 @@ const loadScenarios = (base: DamageInputForm): ScenarioMeta[] => {
     // ignore
   }
   return [
-    { id: makeId(), name: "Option A", values: cloneWithNewIds(base) },
-    { id: makeId(), name: "Option B", values: cloneWithNewIds(base) },
+    { id: makeId(), name: "Critical Build", values: cloneWithNewIds(base) },
+    { id: makeId(), name: "Skill Damage Build", values: cloneWithNewIds(base) },
   ];
 };
 

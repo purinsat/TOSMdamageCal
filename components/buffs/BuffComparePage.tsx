@@ -26,6 +26,7 @@ const makeTimedTiming = (): Extract<BuffTiming, { mode: "timed" }> => ({
   durationSec: 30,
   cooldownSec: 80,
   initialDelaySec: 0,
+  cdReductionPct: 0,
 });
 
 const makeEffect = (): BuffEffect => ({
@@ -35,32 +36,54 @@ const makeEffect = (): BuffEffect => ({
   timing: makeTiming(),
 });
 
-// Default buffs matching the plan example
+// Default buffs
 const makeDefaultBuffs = (): BuffConfig[] => [
   {
     id: makeId(),
-    name: "Mechanic Buff (example)",
+    name: "Velcofer",
     effects: [
-      { id: makeId(), value: 5000, bracket: "attackFlat",  timing: { mode: "always" } },
-      { id: makeId(), value: 15,   bracket: "buffDebuff",  timing: { mode: "timed", durationSec: 30, cooldownSec: 80, initialDelaySec: 0 } },
-      { id: makeId(), value: 15,   bracket: "ignoreDefense", timing: { mode: "timed", durationSec: 30, cooldownSec: 80, initialDelaySec: 0 } },
+      { id: makeId(), value: 75, bracket: "buffDebuff", timing: { mode: "timed", durationSec: 30, cooldownSec: 30, initialDelaySec: 60, cdReductionPct: 0 } },
     ],
   },
   {
     id: makeId(),
-    name: "Always-on Skill Dmg",
+    name: "Lada",
+    effects: [
+      { id: makeId(), value: 30, bracket: "skillDamage", timing: { mode: "timed", durationSec: 40, cooldownSec: 120, initialDelaySec: 60, cdReductionPct: 25 } },
+      { id: makeId(), value: 40, bracket: "buffDebuff",  timing: { mode: "timed", durationSec: 30, cooldownSec: 30,  initialDelaySec: 60, cdReductionPct: 0  } },
+    ],
+  },
+  {
+    id: makeId(),
+    name: "Inferno",
     effects: [
       { id: makeId(), value: 30, bracket: "skillDamage", timing: { mode: "always" } },
     ],
   },
 ];
 
+// Ensure a timed timing object always has cdReductionPct
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeTiming = (timing: any): BuffTiming => {
+  if (!timing || timing.mode === "always") return { mode: "always" };
+  return {
+    mode: "timed",
+    durationSec: timing.durationSec ?? 30,
+    cooldownSec: timing.cooldownSec ?? 80,
+    initialDelaySec: timing.initialDelaySec ?? 0,
+    cdReductionPct: timing.cdReductionPct ?? 0,
+  };
+};
+
 // ─── Migration: old single-effect shape → new effects[] shape ─────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const normalizeBuff = (raw: any): BuffConfig => {
   if (Array.isArray(raw.effects)) {
-    // Already new shape
-    return raw as BuffConfig;
+    // Already new shape — normalize each effect's timing in case cdReductionPct is missing
+    return {
+      ...raw,
+      effects: raw.effects.map((e: any) => ({ ...e, timing: normalizeTiming(e.timing) })),
+    } as BuffConfig;
   }
   // Old shape: { id, name, value, bracket, timing }
   return {
@@ -71,7 +94,7 @@ const normalizeBuff = (raw: any): BuffConfig => {
         id: makeId(),
         value: raw.value ?? 0,
         bracket: (raw.bracket ?? "buffDebuff") as BuffBracket,
-        timing: (raw.timing ?? { mode: "always" }) as BuffTiming,
+        timing: normalizeTiming(raw.timing),
       },
     ],
   };
@@ -213,6 +236,7 @@ const EffectRow = ({ effect, onChange, onRemove, canRemove }: EffectRowProps) =>
                   durationSec: timed?.durationSec ?? 30,
                   cooldownSec: timed?.cooldownSec ?? 80,
                   initialDelaySec: timed?.initialDelaySec ?? 0,
+                  cdReductionPct: timed?.cdReductionPct ?? 0,
                 },
               })
             }
@@ -253,6 +277,16 @@ const EffectRow = ({ effect, onChange, onRemove, canRemove }: EffectRowProps) =>
                 className={`${INPUT_CLS} w-14 text-right`}
               />
               s
+            </label>
+            <label className="flex items-center gap-1">
+              CD-
+              <input
+                type="number" min={0} max={25} step={1} value={timed.cdReductionPct}
+                onChange={(e) => setTiming({ cdReductionPct: Math.min(25, Math.max(0, parseInt(e.target.value) || 0)) })}
+                onWheel={(e) => e.currentTarget.blur()}
+                className={`${INPUT_CLS} w-12 text-right`}
+              />
+              <span title="Cooldown reduction (0–25%). Effective CD = CD × (1 – reduction%)">%</span>
             </label>
           </div>
         )}
@@ -545,10 +579,17 @@ export const BuffComparePage = () => {
                   const valueStr = meta.unit === "flat"
                     ? `+${effect.value} ${meta.label}`
                     : `+${effect.value}% ${meta.label}`;
-                  const timingStr =
-                    effect.timing.mode === "always"
-                      ? "always active"
-                      : `${effect.timing.durationSec}s dur · ${effect.timing.cooldownSec}s CD${effect.timing.initialDelaySec > 0 ? ` · ${effect.timing.initialDelaySec}s delay` : ""}`;
+                  const timingStr = (() => {
+                    if (effect.timing.mode === "always") return "always active";
+                    const t = effect.timing;
+                    const reduction = Math.min(25, Math.max(0, t.cdReductionPct ?? 0));
+                    const effectiveCD = t.cooldownSec * (1 - reduction / 100);
+                    const cdStr = reduction > 0
+                      ? `${t.cooldownSec}s CD (-${reduction}% → ${effectiveCD.toFixed(1)}s)`
+                      : `${t.cooldownSec}s CD`;
+                    const delayStr = t.initialDelaySec > 0 ? ` · ${t.initialDelaySec}s delay` : "";
+                    return `${t.durationSec}s dur · ${cdStr}${delayStr}`;
+                  })();
                   return (
                     <div key={effect.id} className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs">
                       <span className="font-medium text-purple-300">{valueStr}</span>

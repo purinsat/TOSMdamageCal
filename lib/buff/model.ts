@@ -35,6 +35,7 @@ export type BuffTiming =
       durationSec: number;
       cooldownSec: number;
       initialDelaySec: number;
+      cdReductionPct: number; // 0–25; effective CD = cooldownSec * (1 - cdReductionPct/100)
     };
 
 // ─── Buff structure ───────────────────────────────────────────────────────────
@@ -124,10 +125,12 @@ export const computeActiveIntervals = (
   cooldownSec: number,
   fightSec: number,
   initialDelaySec: number = 0,
+  cdReductionPct: number = 0,
 ): [number, number][] => {
   if (fightSec <= 0 || initialDelaySec >= fightSec) return [];
 
-  const safeCD = Math.max(cooldownSec, 0.001);
+  const reduction = Math.min(25, Math.max(0, cdReductionPct)) / 100;
+  const safeCD = Math.max(cooldownSec * (1 - reduction), 0.001);
   const safeDur = Math.max(durationSec, 0);
   const intervals: [number, number][] = [];
   let castTime = initialDelaySec;
@@ -153,8 +156,9 @@ export const computeActiveSeconds = (
   cooldownSec: number,
   fightSec: number,
   initialDelaySec: number = 0,
+  cdReductionPct: number = 0,
 ): number =>
-  computeActiveIntervals(durationSec, cooldownSec, fightSec, initialDelaySec)
+  computeActiveIntervals(durationSec, cooldownSec, fightSec, initialDelaySec, cdReductionPct)
     .reduce((sum, [s, e]) => sum + (e - s), 0);
 
 // ─── Timeline-based buff evaluation ──────────────────────────────────────────
@@ -185,6 +189,7 @@ export const evaluateBuff = (
           eff.timing.cooldownSec,
           fightSec,
           eff.timing.initialDelaySec,
+          eff.timing.cdReductionPct ?? 0,
         ),
   );
 
